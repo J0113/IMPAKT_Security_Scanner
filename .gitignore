@@ -14,3 +14,5 @@ TestResults/
 *.key
 src/Compliance_Scanner/Policies/CIS/*
 !src/Compliance_Scanner/Policies/CIS/README.md
+src/Compliance_Scanner/Policies/cis_*.yml
+__pycache__/

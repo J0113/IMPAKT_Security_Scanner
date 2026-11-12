@@ -21,6 +21,125 @@ public class ComplianceTests
     }
 
     [Fact]
+    public void MissingFileWithContentCheckFailsInsteadOfBeingInvalid()
+    {
+        string missing = Path.Combine(Path.GetTempPath(), "impakt-missing-" + Guid.NewGuid().ToString("N"));
+
+        var positive = RuleChecker.EvaluateCheck(
+            new Check { Id = 1, Condition = "all", Rules = [$"f:{missing} -> r:abc"] }, null);
+        Assert.Equal(CheckStatus.Failed, positive.Status);
+        Assert.False(positive.RuleResults[0].Invalid);
+
+        var negated = RuleChecker.EvaluateCheck(
+            new Check { Id = 2, Condition = "all", Rules = [$"not f:{missing} -> r:abc"] }, null);
+        Assert.Equal(CheckStatus.Passed, negated.Status);
+    }
+
+    [Fact]
+    public void MissingRegistryValueFailsInsteadOfBeingInvalid()
+    {
+        if (!OperatingSystem.IsWindows()) return;
+        const string key = @"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion";
+        string value = "impakt-missing-" + Guid.NewGuid().ToString("N");
+        string rule = $"r:{key} -> {value} -> 1";
+
+        var positive = RuleChecker.EvaluateCheck(
+            new Check { Id = 1, Condition = "all", Rules = [rule] }, null);
+        Assert.Equal(CheckStatus.Failed, positive.Status);
+        Assert.False(positive.RuleResults[0].Invalid);
+
+        var negated = RuleChecker.EvaluateCheck(
+            new Check { Id = 2, Condition = "all", Rules = [$"not {rule}"] }, null);
+        Assert.Equal(CheckStatus.Passed, negated.Status);
+    }
+
+    [Fact]
+    public void PowerShellProgressClixmlIsDroppedFromStderr()
+    {
+        const string progressOnly = "#< CLIXML\r\n<Objs Version=\"1.1.0.1\" xmlns=\"http://schemas.microsoft.com/powershell/2004/04\">" +
+            "<Obj S=\"progress\" RefId=\"0\"><MS><I64 N=\"SourceId\">1</I64><PR N=\"Record\"><AV>Preparing modules for first use.</AV></PR></MS></Obj></Objs>";
+
+        Assert.Equal("", RuleChecker.PowerShellStderrToText(progressOnly));
+    }
+
+    [Fact]
+    public void PowerShellErrorClixmlBecomesReadableText()
+    {
+        const string error = "native stderr\r\n#< CLIXML\r\n<Objs Version=\"1.1.0.1\" xmlns=\"http://schemas.microsoft.com/powershell/2004/04\">" +
+            "<S S=\"Error\">Get-Item : Cannot find path 'C:\\x' because it does not exist._x000D__x000A_</S>" +
+            "<S S=\"Warning\">Example warning</S><S S=\"error\">At line:1 char:1_x000D__x000A_</S></Objs>";
+
+        string text = RuleChecker.PowerShellStderrToText(error);
+
+        Assert.Contains("Cannot find path 'C:\\x' because it does not exist.", text);
+        Assert.StartsWith("native stderr", text);
+        Assert.Contains($"Example warning{Environment.NewLine}At line:1 char:1", text);
+        Assert.DoesNotContain("CLIXML", text);
+        Assert.Equal("plain stderr", RuleChecker.PowerShellStderrToText("plain stderr"));
+    }
+
+    [Fact]
+    public void PowerShellErrorsAreReadableInCommandRulesOnWindows()
+    {
+        if (!OperatingSystem.IsWindows()) return;
+
+        var check = new Check { Id = 1, Condition = "all", Rules = ["c:Write-Error 'impakt-clixml-probe' -> r:impakt-clixml-probe$"] };
+
+        Assert.Equal(CheckStatus.Passed, RuleChecker.EvaluateCheck(check, null).Status);
+    }
+
+    [Fact]
+    public void PolicyReadsNameOfRequirementsAndChecks()
+    {
+        const string yaml = """
+            policy: { id: "p", file: "p.yml", name: "P", description: "d" }
+            requirements:
+              name: "Needs Windows"
+              condition: all
+              rules: ["c:cmd /c ver -> r:Windows"]
+            checks:
+              - id: 1
+                name: "Ensure the thing"
+                condition: all
+                rules: ["f:/etc/hosts"]
+            """;
+        var deserializer = new YamlDotNet.Serialization.DeserializerBuilder()
+            .WithNamingConvention(YamlDotNet.Serialization.NamingConventions.UnderscoredNamingConvention.Instance)
+            .IgnoreUnmatchedProperties()
+            .Build();
+
+        SCAPolicy policy = deserializer.Deserialize<SCAPolicy>(yaml);
+
+        Assert.Equal("Needs Windows", policy.Requirements!.Name);
+        Assert.Equal("Ensure the thing", policy.Checks[0].Name);
+    }
+
+    [Fact]
+    public void OnlyChecksWithoutTitleOrNameAreReported()
+    {
+        const string yaml = """
+            policy: { id: "p", file: "p.yml", name: "P", description: "d" }
+            checks:
+              - id: 1
+                name: "Has a name"
+                rules: ["f:/etc/hosts"]
+              - id: 2
+                title: "Has a title"
+                rules: ["f:/etc/hosts"]
+              - id: 3
+                rules: ["f:/etc/hosts"]
+            """;
+        var deserializer = new YamlDotNet.Serialization.DeserializerBuilder()
+            .WithNamingConvention(YamlDotNet.Serialization.NamingConventions.UnderscoredNamingConvention.Instance)
+            .IgnoreUnmatchedProperties()
+            .Build();
+
+        SCAPolicy policy = deserializer.Deserialize<SCAPolicy>(yaml);
+
+        Assert.Equal([3], policy.CheckIdsWithoutDisplayTitle());
+    }
+
+    [Fact]
     public void GeneratedScannerConfigContainsOnlyComplianceSettings()
     {
         string path = Path.GetTempFileName();

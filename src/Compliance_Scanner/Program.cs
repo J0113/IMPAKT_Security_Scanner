@@ -93,6 +93,7 @@ static bool RequirementsMet(SCAPolicy policy)
     {
         Id = 0,
         Title = policy.Requirements.Title,
+        Name = policy.Requirements.Name,
         Condition = policy.Requirements.Condition,
         Rules = policy.Requirements.Rules
     };
@@ -198,6 +199,10 @@ static int ScanCommand(string policyPath, IReporter reporter, IDeserializer dese
     policyReport.Policy = policy.Policy;
     reporter.PrintPolicyHeader(policy, GetPlatform());
 
+    List<int> unnamedChecks = policy.CheckIdsWithoutDisplayTitle();
+    if (unnamedChecks.Count > 0)
+        reporter.PrintWarning($"{unnamedChecks.Count} check(s) have no title or name (ids: {string.Join(", ", unnamedChecks.Take(10))}{(unnamedChecks.Count > 10 ? ", …" : "")})");
+
     // ── Requirements ─────────────────────────────────────────────────────────────
 
     if (policy.Requirements is not null)
@@ -206,6 +211,7 @@ static int ScanCommand(string policyPath, IReporter reporter, IDeserializer dese
         {
             Id = 0,
             Title = policy.Requirements.Title,
+            Name = policy.Requirements.Name,
             Description = policy.Requirements.Description,
             Condition = policy.Requirements.Condition,
             Rules = policy.Requirements.Rules

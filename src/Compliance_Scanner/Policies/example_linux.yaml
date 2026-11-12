@@ -16,7 +16,7 @@ policy:
 
 # Requirements: Linux kernel confirmed via uname.
 requirements:
-  title: "Requires a Linux kernel"
+  name: "Requires a Linux kernel"
   description: "This policy targets Linux systems only"
   condition: all
   rules:
@@ -38,7 +38,7 @@ checks:
   # FILE EXISTENCE  (f: without "->")
   # ---------------------------------------------------------------------------
   - id: 3001
-    title: "Ensure /etc/passwd exists"
+    name: "Ensure /etc/passwd exists"
     description: "The local user database must be present"
     rationale: "Without /etc/passwd, user lookups and authentication fail"
     remediation: "Restore from backup or re-provision the OS"
@@ -47,7 +47,7 @@ checks:
       - 'f:$passwd'
 
   - id: 3002
-    title: "Ensure /etc/shadow exists"
+    name: "Ensure /etc/shadow exists"
     description: "The shadow password file must be present on systems using shadow passwords"
     rationale: "Shadow passwords prevent unprivileged users from reading hashed passwords"
     remediation: "Run 'pwconv' to migrate to shadow passwords"
@@ -56,7 +56,7 @@ checks:
       - 'f:$shadow'
 
   - id: 3003
-    title: "Ensure /etc/hosts exists"
+    name: "Ensure /etc/hosts exists"
     description: "The hosts file provides local hostname resolution"
     rationale: "Without it, loopback and hostname resolution may fail"
     remediation: "Create /etc/hosts with at minimum '127.0.0.1  localhost'"
@@ -65,7 +65,7 @@ checks:
       - 'f:$hosts'
 
   - id: 3004
-    title: "Ensure /etc/ssh/sshd_config exists"
+    name: "Ensure /etc/ssh/sshd_config exists"
     description: "The SSH daemon configuration file must be present"
     rationale: "An absent sshd_config means SSH settings cannot be audited or enforced"
     remediation: "Install openssh-server or equivalent and ensure /etc/ssh/sshd_config is created"
@@ -74,7 +74,7 @@ checks:
       - 'f:$sshd_cfg'
 
   - id: 3005
-    title: "Ensure /etc/login.defs exists"
+    name: "Ensure /etc/login.defs exists"
     description: "The login definitions file controls password ageing and UID/GID ranges"
     rationale: "Without it, default password policy is undefined and potentially insecure"
     condition: all
@@ -85,7 +85,7 @@ checks:
   # FILE CONTENT — regex  (f: -> r:PATTERN)
   # ---------------------------------------------------------------------------
   - id: 3006
-    title: "Ensure /etc/hosts defines the loopback address"
+    name: "Ensure /etc/hosts defines the loopback address"
     description: "A line mapping 127.0.0.1 to localhost must be present and active"
     rationale: "Applications depend on localhost resolving to 127.0.0.1"
     remediation: "Add '127.0.0.1  localhost' to /etc/hosts"
@@ -94,7 +94,7 @@ checks:
       - 'f:$hosts -> r:^127\.0\.0\.1\s+localhost'
 
   - id: 3007
-    title: "Ensure /etc/passwd uses colon-delimited format"
+    name: "Ensure /etc/passwd uses colon-delimited format"
     description: "Every entry must follow username:password:uid:gid:gecos:home:shell"
     rationale: "Malformed entries indicate file corruption or tampering"
     condition: all
@@ -102,7 +102,7 @@ checks:
       - 'f:$passwd -> r:^[^:]+:[^:]*:[0-9]+:[0-9]+'
 
   - id: 3008
-    title: "Ensure SSH PermitRootLogin is disabled or set to prohibit-password"
+    name: "Ensure SSH PermitRootLogin is disabled or set to prohibit-password"
     description: "sshd_config must not allow direct root login with a password"
     rationale: "Direct root SSH login bypasses sudo auditing and increases breach impact"
     remediation: "Set 'PermitRootLogin no' in /etc/ssh/sshd_config and run: systemctl reload sshd"
@@ -111,7 +111,7 @@ checks:
       - 'f:$sshd_cfg -> r:PermitRootLogin\s+(no|prohibit-password)'
 
   - id: 3009
-    title: "Ensure SSH Protocol version 2 is in use (or not downgraded to 1)"
+    name: "Ensure SSH Protocol version 2 is in use (or not downgraded to 1)"
     description: "sshd_config must not contain 'Protocol 1'"
     rationale: "SSH Protocol 1 has known critical vulnerabilities and must not be used"
     remediation: "Remove any 'Protocol 1' line from /etc/ssh/sshd_config"
@@ -120,7 +120,7 @@ checks:
       - 'f:$sshd_cfg -> r:^Protocol\s+1$'
 
   - id: 3010
-    title: "Ensure PASS_MAX_DAYS is set in /etc/login.defs"
+    name: "Ensure PASS_MAX_DAYS is set in /etc/login.defs"
     description: "A maximum password age policy must be defined"
     rationale: "Without a maximum password age, passwords may never be rotated"
     remediation: "Set PASS_MAX_DAYS to 90 or less in /etc/login.defs"
@@ -132,7 +132,7 @@ checks:
   # FILE CONTENT — negated regex  (f: -> !r:PATTERN)
   # ---------------------------------------------------------------------------
   - id: 3011
-    title: "Ensure no account has an empty password hash in /etc/passwd"
+    name: "Ensure no account has an empty password hash in /etc/passwd"
     description: "No line should match username::uid:... (empty password field)"
     rationale: "Empty password fields allow login without authentication"
     remediation: "Lock the account: passwd -l <username>"
@@ -141,7 +141,7 @@ checks:
       - 'f:$passwd -> r:^[^:]+::[0-9]+'
 
   - id: 3012
-    title: "Ensure SSH password authentication is not explicitly enabled"
+    name: "Ensure SSH password authentication is not explicitly enabled"
     description: "sshd_config must not contain an active 'PasswordAuthentication yes' line"
     rationale: "Password authentication is susceptible to brute-force; prefer key-based auth"
     remediation: "Set 'PasswordAuthentication no' in /etc/ssh/sshd_config and reload sshd"
@@ -153,7 +153,7 @@ checks:
   # FILE CONTENT — AND conditions  (f: -> cond1 && cond2 && ...)
   # ---------------------------------------------------------------------------
   - id: 3013
-    title: "Ensure the localhost line in /etc/hosts is not commented out"
+    name: "Ensure the localhost line in /etc/hosts is not commented out"
     description: "The loopback entry must be an active (non-comment) line"
     rationale: "A commented-out localhost entry is not effective"
     remediation: "Remove the leading '#' from the localhost line in /etc/hosts"
@@ -165,7 +165,7 @@ checks:
   # DIRECTORY EXISTENCE  (d: without "->")
   # ---------------------------------------------------------------------------
   - id: 3014
-    title: "Ensure /etc directory exists"
+    name: "Ensure /etc directory exists"
     description: "The system configuration directory must be present"
     rationale: "Its absence indicates catastrophic system damage"
     condition: all
@@ -173,7 +173,7 @@ checks:
       - 'd:/etc'
 
   - id: 3015
-    title: "Ensure /etc/ssh directory exists"
+    name: "Ensure /etc/ssh directory exists"
     description: "The SSH configuration directory must be present if SSH is in use"
     rationale: "Without it, the SSH daemon cannot load its configuration"
     condition: all
@@ -184,7 +184,7 @@ checks:
   # PROCESS CHECKS  (p:)
   # ---------------------------------------------------------------------------
   - id: 3016
-    title: "Ensure a system init process is running"
+    name: "Ensure a system init process is running"
     description: "systemd, init, or upstart must be active as PID 1"
     rationale: "The init system is responsible for starting and supervising all services"
     condition: any
@@ -194,7 +194,7 @@ checks:
       - 'p:upstart'
 
   - id: 3017
-    title: "Ensure no unexpected backdoor process is running"
+    name: "Ensure no unexpected backdoor process is running"
     description: "A clearly fake process name must not appear in the process list"
     rationale: "Demonstrates the NONE condition — check passes when no such process is found"
     condition: none
@@ -205,7 +205,7 @@ checks:
   # COMMAND OUTPUT — regex  (c: -> r:PATTERN)
   # ---------------------------------------------------------------------------
   - id: 3018
-    title: "Ensure this system is running a Linux kernel"
+    name: "Ensure this system is running a Linux kernel"
     description: "uname -s must return 'Linux'"
     rationale: "Confirms the policy is executing on the intended platform"
     condition: all
@@ -213,7 +213,7 @@ checks:
       - 'c:uname -s -> r:^Linux'
 
   - id: 3019
-    title: "Ensure a hostname is configured"
+    name: "Ensure a hostname is configured"
     description: "The system must have a non-empty hostname"
     rationale: "A missing hostname causes problems with logging, Kerberos, and network identity"
     remediation: "Set hostname: hostnamectl set-hostname <name>"
@@ -225,7 +225,7 @@ checks:
   # COMMAND OUTPUT — numeric  (c: -> n:PATTERN compare OP VALUE)
   # ---------------------------------------------------------------------------
   - id: 3020
-    title: "Ensure the Linux kernel major version is at least 4"
+    name: "Ensure the Linux kernel major version is at least 4"
     description: "Numeric check: first segment of 'uname -r' must be >= 4"
     rationale: "Kernels older than 4.x lack many modern security features (seccomp, namespaces improvements)"
     remediation: "Update the kernel to version 4.x or later via the distribution's package manager"
@@ -234,7 +234,7 @@ checks:
       - 'c:uname -r -> n:^(\d+) compare >= 4'
 
   - id: 3021
-    title: "Ensure PASS_MAX_DAYS is 365 or fewer"
+    name: "Ensure PASS_MAX_DAYS is 365 or fewer"
     description: "Numeric check: the configured maximum password age must be <= 365"
     rationale: "Passwords older than one year significantly increase the window of compromise"
     remediation: "Set PASS_MAX_DAYS to 90 (or at most 365) in /etc/login.defs"
@@ -243,7 +243,7 @@ checks:
       - 'f:$login_defs -> n:^PASS_MAX_DAYS\s+(\d+) compare <= 365'
 
   - id: 3022
-    title: "Ensure the scanner is not running as root"
+    name: "Ensure the scanner is not running as root"
     description: "Numeric check: UID from 'id -u' must be greater than 0"
     rationale: "Running security tooling as root unnecessarily increases attack surface"
     remediation: "Re-run the scanner as a non-privileged user"

@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Xml.Linq;
 
 namespace Compliance_Scanner;
 
@@ -215,10 +216,7 @@ public static class RuleChecker
 
         if (foundFile is null)
         {
-            // If the file doesn't exist and we need to check its content, that's invalid
-            if (rule.HasContentCheck)
-                return new RuleCheckResult { Status = CheckStatus.Invalid, Detail = $"Cannot check content: file not found at {rule.Target}" };
-            // If the file doesn't exist and we just need to check existence, it fails
+            // A missing file is a normal "condition not met" (Failed), not an error (Invalid)
             return new RuleCheckResult { Status = CheckStatus.Failed, Detail = $"File not found: {rule.Target}" };
         }
 
@@ -276,10 +274,7 @@ public static class RuleChecker
 
         if (foundDir is null)
         {
-            // If the directory doesn't exist and we need to check content, that's invalid
-            if (rule.HasContentCheck)
-                return new RuleCheckResult { Status = CheckStatus.Invalid, Detail = $"Cannot check content: directory not found at {rule.Target}" };
-            // If the directory doesn't exist and we just need to check existence, it fails
+            // A missing directory is a normal "condition not met" (Failed), not an error (Invalid)
             return new RuleCheckResult { Status = CheckStatus.Failed, Detail = $"Directory not found: {rule.Target}" };
         }
 
@@ -374,9 +369,10 @@ public static class RuleChecker
             ProcessStartInfo psi;
             if (OperatingSystem.IsWindows())
             {
-                // Wazuh runs command rules through cmd.exe; translate the rule into the
-                // PowerShell script this scanner executes (see WindowsCommand).
-                string commandToRun = WindowsCommand.ToPowerShellScript(rule.Target);
+                // Translate Wazuh command rules before passing the script to PowerShell.
+                // Progress output would otherwise end up on stderr as CLIXML.
+                string commandToRun = "$ProgressPreference = 'SilentlyContinue';" + Environment.NewLine
+                    + WindowsCommand.ToPowerShellScript(rule.Target);
                 string encodedCommand = Convert.ToBase64String(Encoding.Unicode.GetBytes(commandToRun));
 
                 psi = new ProcessStartInfo("powershell.exe")
@@ -428,7 +424,7 @@ public static class RuleChecker
             }
 
             string stdout = stdoutTask.Result;
-            string stderr = stderrTask.Result;
+            string stderr = OperatingSystem.IsWindows() ? PowerShellStderrToText(stderrTask.Result) : stderrTask.Result;
             string output = string.IsNullOrEmpty(stdout)
                 ? stderr
                 : string.IsNullOrEmpty(stderr)
@@ -493,9 +489,7 @@ public static class RuleChecker
             using Microsoft.Win32.RegistryKey? key = hive.OpenSubKey(subKey);
             if (key is null)
             {
-                // A missing key means the setting is not configured: the pattern cannot match,
-                // so the rule fails (same outcome as Wazuh). Marking it invalid would hide
-                // non-compliance and would also break negated rules.
+                // A missing key is a normal "condition not met" (Failed), not an error (Invalid)
                 return new RuleCheckResult { Status = CheckStatus.Failed, Detail = $"Registry key not found: {keyPath}" };
             }
 
@@ -511,7 +505,10 @@ public static class RuleChecker
             {
                 object? value = key.GetValue(rule.RegistryValueName);
                 if (value is null)
+                {
+                    // A missing value is a normal "condition not met" (Failed), not an error (Invalid)
                     return new RuleCheckResult { Status = CheckStatus.Failed, Detail = $"Registry value '{rule.RegistryValueName}' not found in '{keyPath}'" };
+                }
 
                 string valueStr = FormatRegistryValue(value);
 
@@ -690,4 +687,53 @@ public static class RuleChecker
             _                  => $"{bytes / (1024.0 * 1024):F1} MB"
         };
 
+    /// <summary>
+    /// With -EncodedCommand, PowerShell writes errors and progress to stderr as CLIXML ("#&lt; CLIXML ...").
+    /// Returns the error/warning text from it, or "" when it only held progress. Other text is returned as is.
+    /// </summary>
+    internal static string PowerShellStderrToText(string stderr)
+    {
+        const string header = "#< CLIXML";
+        if (!stderr.Contains(header, StringComparison.Ordinal)) return stderr;
+
+        try
+        {
+            string payload = Regex.Replace(stderr, "(?m)^#< CLIXML\r?\n", string.Empty);
+            if (payload == stderr) return stderr;
+
+            var root = XElement.Parse($"<root>{payload}</root>");
+            if (!root.Elements().Any() || root.Elements().Any(element => element.Name.LocalName != "Objs"))
+                return stderr;
+
+            StringBuilder text = new();
+            foreach (XNode node in root.Nodes())
+            {
+                if (node is XText plainText)
+                {
+                    text.Append(plainText.Value);
+                    continue;
+                }
+
+                if (node is not XElement records) continue;
+                foreach (XElement record in records.Elements())
+                {
+                    if (record.Name.LocalName != "S") continue;
+                    string? stream = (string?)record.Attribute("S");
+                    if (string.Equals(stream, "Error", StringComparison.OrdinalIgnoreCase)
+                        || string.Equals(stream, "Warning", StringComparison.OrdinalIgnoreCase))
+                    {
+                        string message = Regex.Replace(record.Value, "_x([0-9A-Fa-f]{4})_",
+                            match => ((char)Convert.ToInt32(match.Groups[1].Value, 16)).ToString());
+                        text.AppendLine(message.TrimEnd('\r', '\n'));
+                    }
+                }
+            }
+
+            return text.ToString().Trim();
+        }
+        catch (System.Xml.XmlException)
+        {
+            return stderr;
+        }
+    }
 }

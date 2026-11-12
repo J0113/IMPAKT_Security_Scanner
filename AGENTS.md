@@ -14,6 +14,7 @@ src/
   Sftp_Uploader/               # Standalone SFTP report uploader with host-key verification
 tests/
   IMPAKT_Security_Scanner.Tests/ # xUnit test suite covering all applications
+tools/                         # Helper scripts (split_cis_dc_ms.py: CIS Windows Server benchmark -> member server / DC variants)
 ```
 
 ---
@@ -25,7 +26,7 @@ tests/
 - **Python:** Always use `python3` for Python commands.
 - **Never commit secrets, external CIS policies, or artifacts:**
   - Keep `config.yml`, `sftp-config.yml`, `*.pem`, `*.key`, `results/`, and `artifacts/` untracked.
-  - CIS benchmark YAML files are owned by Wazuh and must not be committed to this repository (`src/Compliance_Scanner/Policies/CIS/*` is gitignored, except `README.md`).
+  - CIS benchmark YAML files are owned by Wazuh and must not be committed to this repository (`src/Compliance_Scanner/Policies/CIS/*` and `src/Compliance_Scanner/Policies/cis_*.yml` are gitignored, except `CIS/README.md`).
 
 ---
 

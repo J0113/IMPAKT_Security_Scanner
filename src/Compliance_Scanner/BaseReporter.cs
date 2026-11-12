@@ -96,7 +96,7 @@ public abstract class BaseReporter : IReporter
         if (Level == OutputLevel.Compact) return;
 
         WriteLine("══ Requirements " + new string('═', 52), ConsoleColor.Cyan);
-        WriteLine($"  {requirementsCheck.Title}");
+        WriteLine($"  {requirementsCheck.DisplayTitle}");
         if (!string.IsNullOrWhiteSpace(requirementsCheck.Description))
             WriteLine($"  {requirementsCheck.Description}");
 

@@ -96,6 +96,7 @@ public sealed class JsonOutputTests : IDisposable
         using var json = JsonDocument.Parse(run.Output);
         var result = json.RootElement.GetProperty("policies")[0];
         Assert.Equal("requirementsNotMet", result.GetProperty("status").GetString());
+        Assert.Equal("Unmet requirement", result.GetProperty("requirements").GetProperty("title").GetString());
         Assert.Equal("failed", result.GetProperty("requirements").GetProperty("status").GetString());
         Assert.Equal(0, result.GetProperty("checks").GetArrayLength());
     }

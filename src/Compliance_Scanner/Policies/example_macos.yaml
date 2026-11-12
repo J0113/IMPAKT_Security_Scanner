@@ -15,7 +15,7 @@ policy:
 
 # Requirements: Darwin kernel with macOS 13 (Ventura) or later.
 requirements:
-  title: "Requires macOS 13 (Ventura) or later"
+  name: "Requires macOS 13 (Ventura) or later"
   description: "This policy targets macOS Ventura and Sonoma only"
   condition: all
   rules:
@@ -36,7 +36,7 @@ checks:
   # FILE EXISTENCE  (f: without "->")
   # ---------------------------------------------------------------------------
   - id: 2001
-    title: "Ensure /etc/hosts file exists"
+    name: "Ensure /etc/hosts file exists"
     description: "The hosts file provides local hostname-to-IP mappings"
     rationale: "Without /etc/hosts, loopback name resolution may fail"
     remediation: "Restore /private/etc/hosts from a known-good macOS installation"
@@ -45,7 +45,7 @@ checks:
       - 'f:$hosts'
 
   - id: 2002
-    title: "Ensure /etc/passwd file exists"
+    name: "Ensure /etc/passwd file exists"
     description: "macOS still ships /private/etc/passwd for compatibility"
     rationale: "Its absence suggests system file tampering"
     remediation: "Reinstall macOS or restore from a Time Machine backup"
@@ -54,7 +54,7 @@ checks:
       - 'f:$passwd'
 
   - id: 2003
-    title: "Ensure SSH daemon configuration file exists"
+    name: "Ensure SSH daemon configuration file exists"
     description: "/etc/ssh/sshd_config must be present if SSH service is installed"
     rationale: "An absent sshd_config means SSH settings cannot be audited"
     remediation: "Install the full OpenSSH package or disable the SSH service"
@@ -66,7 +66,7 @@ checks:
   # FILE CONTENT — regex  (f: -> r:PATTERN)
   # ---------------------------------------------------------------------------
   - id: 2004
-    title: "Ensure /etc/hosts defines the loopback address"
+    name: "Ensure /etc/hosts defines the loopback address"
     description: "A line mapping 127.0.0.1 to localhost must be present"
     rationale: "Applications assume localhost resolves to 127.0.0.1"
     remediation: "Add '127.0.0.1  localhost' to /private/etc/hosts"
@@ -75,7 +75,7 @@ checks:
       - 'f:$hosts -> r:^127\.0\.0\.1\s+localhost'
 
   - id: 2005
-    title: "Ensure /etc/passwd uses colon-delimited format"
+    name: "Ensure /etc/passwd uses colon-delimited format"
     description: "Each entry must follow the standard username:password:uid:gid:... format"
     rationale: "Malformed entries indicate file corruption or tampering"
     condition: all
@@ -83,7 +83,7 @@ checks:
       - 'f:$passwd -> r:^[^:]+:[^:]*:[0-9]+:[0-9]+'
 
   - id: 2006
-    title: "Ensure SSH PermitRootLogin is disabled"
+    name: "Ensure SSH PermitRootLogin is disabled"
     description: "sshd_config must contain 'PermitRootLogin no' or 'prohibit-password'"
     rationale: "Direct root SSH login bypasses sudo auditing and increases breach impact"
     remediation: "Set 'PermitRootLogin no' in /etc/ssh/sshd_config and reload sshd"
@@ -95,7 +95,7 @@ checks:
   # FILE CONTENT — negated regex  (f: -> !r:PATTERN)
   # ---------------------------------------------------------------------------
   - id: 2007
-    title: "Ensure no account has an empty password field in /etc/passwd"
+    name: "Ensure no account has an empty password field in /etc/passwd"
     description: "No line should match username::uid:... (empty password hash)"
     rationale: "Empty password fields allow login without authentication"
     remediation: "Lock affected accounts: dscl . -passwd /Users/<name> <newpassword>"
@@ -104,7 +104,7 @@ checks:
       - 'f:$passwd -> r:^[^:]+::[0-9]+'
 
   - id: 2008
-    title: "Ensure SSH password authentication is not explicitly enabled"
+    name: "Ensure SSH password authentication is not explicitly enabled"
     description: "sshd_config must not contain 'PasswordAuthentication yes'"
     rationale: "Password authentication is susceptible to brute-force attacks; prefer keys"
     remediation: "Set 'PasswordAuthentication no' in /etc/ssh/sshd_config and reload sshd"
@@ -116,7 +116,7 @@ checks:
   # FILE CONTENT — AND conditions  (f: -> cond1 && cond2 && ...)
   # ---------------------------------------------------------------------------
   - id: 2009
-    title: "Ensure localhost line in /etc/hosts is not commented out"
+    name: "Ensure localhost line in /etc/hosts is not commented out"
     description: "The loopback entry must be an active (non-comment) line"
     rationale: "A commented-out localhost entry is not effective"
     remediation: "Remove the leading '#' from the localhost line in /private/etc/hosts"
@@ -128,7 +128,7 @@ checks:
   # DIRECTORY EXISTENCE  (d: without "->")
   # ---------------------------------------------------------------------------
   - id: 2010
-    title: "Ensure /private/etc directory exists"
+    name: "Ensure /private/etc directory exists"
     description: "The /private/etc configuration directory must be present"
     rationale: "Its absence indicates serious file system damage"
     condition: all
@@ -136,7 +136,7 @@ checks:
       - 'd:/private/etc'
 
   - id: 2011
-    title: "Ensure /Library directory exists"
+    name: "Ensure /Library directory exists"
     description: "/Library houses system-wide application data, preferences, and frameworks"
     rationale: "Its absence indicates a severely damaged or incomplete macOS installation"
     condition: all
@@ -144,7 +144,7 @@ checks:
       - 'd:/Library'
 
   - id: 2012
-    title: "Ensure /Applications directory exists"
+    name: "Ensure /Applications directory exists"
     description: "/Applications is the standard install location for macOS apps"
     rationale: "Its absence is highly abnormal and suggests tampering"
     condition: all
@@ -155,7 +155,7 @@ checks:
   # PROCESS CHECKS  (p:)
   # ---------------------------------------------------------------------------
   - id: 2013
-    title: "Ensure launchd (macOS init system) is running"
+    name: "Ensure launchd (macOS init system) is running"
     description: "launchd is PID 1 on macOS and manages all services and daemons"
     rationale: "Without launchd, no system services can start"
     condition: all
@@ -163,7 +163,7 @@ checks:
       - 'p:launchd'
 
   - id: 2014
-    title: "Ensure no unexpected root-level backdoor process is running"
+    name: "Ensure no unexpected root-level backdoor process is running"
     description: "A clearly fake process name must not appear in the process list"
     rationale: "Demonstrates the NONE condition — passes when no such process is found"
     condition: none
@@ -174,7 +174,7 @@ checks:
   # COMMAND OUTPUT — regex  (c: -> r:PATTERN)
   # ---------------------------------------------------------------------------
   - id: 2015
-    title: "Ensure this system is running a Darwin (macOS) kernel"
+    name: "Ensure this system is running a Darwin (macOS) kernel"
     description: "uname -s must return 'Darwin'"
     rationale: "Confirms policy is running on the intended platform"
     condition: all
@@ -182,7 +182,7 @@ checks:
       - 'c:uname -s -> r:^Darwin'
 
   - id: 2016
-    title: "Ensure hostname is configured"
+    name: "Ensure hostname is configured"
     description: "The system must have a non-empty hostname"
     rationale: "A missing hostname causes issues with logging and network identity"
     remediation: "Set hostname: sudo scutil --set HostName <name>"
@@ -191,7 +191,7 @@ checks:
       - 'c:hostname -> r:\w+'
 
   - id: 2017
-    title: "Ensure Gatekeeper is enabled"
+    name: "Ensure Gatekeeper is enabled"
     description: "spctl --status must report 'assessments enabled'"
     rationale: "Gatekeeper prevents unsigned or malicious software from running"
     remediation: "Enable Gatekeeper: sudo spctl --master-enable"
@@ -200,7 +200,7 @@ checks:
       - 'c:spctl --status -> r:assessments enabled'
 
   - id: 2018
-    title: "Ensure System Integrity Protection (SIP) is enabled"
+    name: "Ensure System Integrity Protection (SIP) is enabled"
     description: "csrutil status must report 'enabled'"
     rationale: "SIP protects critical system directories from modification, even by root"
     remediation: "Boot into Recovery Mode and run: csrutil enable"
@@ -209,7 +209,7 @@ checks:
       - 'c:csrutil status -> r:enabled'
 
   - id: 2019
-    title: "Ensure macOS Application Layer Firewall is enabled"
+    name: "Ensure macOS Application Layer Firewall is enabled"
     description: "globalstate in ALF preferences must be 1 or 2 (not 0)"
     rationale: "The firewall blocks unauthorised incoming connections"
     remediation: >
@@ -223,7 +223,7 @@ checks:
   # COMMAND OUTPUT — numeric  (c: -> n:PATTERN compare OP VALUE)
   # ---------------------------------------------------------------------------
   - id: 2020
-    title: "Ensure the scanner is not running as root"
+    name: "Ensure the scanner is not running as root"
     description: "Numeric check: UID from 'id -u' must be greater than 0"
     rationale: "Running security tooling as root unnecessarily increases attack surface"
     remediation: "Re-run as a non-privileged user"

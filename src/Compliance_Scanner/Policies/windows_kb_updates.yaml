@@ -7,29 +7,29 @@ policy:
     - "https://support.microsoft.com/en-us/kb/4027667"
 
 requirements:
-  title: "Windows Operating System Required"
+  name: "Windows Operating System Required"
   description: "This policy applies only to Windows systems"
   condition: all
   rules:
-    - 'c:cmd /c ver -> r:Windows'
+    - 'r:HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion'
 
 checks:
   - id: 99998
-    title: "Ensure Windows KB updates are recent (within 180 days)"
+    name: "Ensure Windows KB updates are recent (within 180 days)"
     description: "Verifies that the most recent Windows KB/hotfix was installed within the last 180 days"
     rationale: "Timely application of security updates is critical to maintain system security and stability. Systems not receiving regular updates are vulnerable to known security exploits."
     remediation: "Install the latest Windows updates through Windows Update or by manually downloading and installing the latest hotfixes from Microsoft KB articles."
     condition: all
     rules:
-      - 'c:cmd /c powershell "(Get-HotFix | Sort-Object InstalledOn -Descending | Select-Object -First 1).InstalledOn.ToString(\"MM-dd-yyyy\")" -> r:\d{2}-\d{2}-\d{4}'
-      - 'c:cmd /c powershell "[Math]::Floor(((Get-Date) - (Get-HotFix | Sort-Object InstalledOn -Descending | Select-Object -First 1).InstalledOn).TotalDays)" -> n:^(\d+) compare <= 180'
+      - 'c:(Get-HotFix | Sort-Object InstalledOn -Descending | Select-Object -First 1).InstalledOn.ToString(''MM-dd-yyyy'') -> r:\d{2}-\d{2}-\d{4}'
+      - 'c:[Math]::Floor(((Get-Date) - (Get-HotFix | Sort-Object InstalledOn -Descending | Select-Object -First 1).InstalledOn).TotalDays) -> n:^(\d+) compare <= 180'
 
   - id: 99999
-    title: "Ensure system has been restarted within the last year"
+    name: "Ensure system has been restarted within the last year"
     description: "Verifies that the system uptime is less than 365 days (one year) to ensure regular restarts for system stability and security"
     rationale: "Regular system restarts are essential for applying kernel updates, clearing memory leaks, and maintaining system stability. Systems running for more than a year without restart may have accumulated technical debt and security vulnerabilities."
     remediation: "Schedule a system restart or perform a manual restart during a maintenance window to keep the system current."
     condition: all
     rules:
-      - 'c:cmd /c powershell "(Get-Date) - (Get-CimInstance -ClassName Win32_OperatingSystem).LastBootUpTime | Select-Object -ExpandProperty Days" -> r:\d+'
-      - 'c:cmd /c powershell "[Math]::Floor(((Get-Date) - (Get-CimInstance -ClassName Win32_OperatingSystem).LastBootUpTime).TotalDays)" -> n:^(\d+) compare < 365'
+      - 'c:(Get-Date) - (Get-CimInstance -ClassName Win32_OperatingSystem).LastBootUpTime | Select-Object -ExpandProperty Days -> r:\d+'
+      - 'c:[Math]::Floor(((Get-Date) - (Get-CimInstance -ClassName Win32_OperatingSystem).LastBootUpTime).TotalDays) -> n:^(\d+) compare < 365'

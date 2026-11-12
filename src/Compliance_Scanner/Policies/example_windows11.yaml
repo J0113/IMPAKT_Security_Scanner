@@ -16,7 +16,7 @@ policy:
 # Requirements: ALL must pass before any checks run.
 # Windows 11 is identified by build >= 22000 and the ProductName starting with "Windows 11".
 requirements:
-  title: "Requires Windows 11 (build 22000+)"
+  name: "Requires Windows 11 (build 22000+)"
   description: "This policy targets Windows 11 workstations and domain controllers only"
   condition: all
   rules:
@@ -34,7 +34,7 @@ checks:
   # CREDENTIAL & AUTHENTICATION HARDENING  (r:)
   # ---------------------------------------------------------------------------
   - id: 1001
-    title: "Ensure blank password use over network is restricted"
+    name: "Ensure blank password use over network is restricted"
     description: "LimitBlankPasswordUse must be set to 1 in LSA registry settings"
     rationale: "Without this, accounts with empty passwords can authenticate over the network"
     remediation: >
@@ -45,7 +45,7 @@ checks:
       - 'r:HKLM\System\CurrentControlSet\Control\Lsa -> LimitBlankPasswordUse -> 1'
 
   - id: 1002
-    title: "Ensure LAN Manager hash storage is disabled"
+    name: "Ensure LAN Manager hash storage is disabled"
     description: "NoLMHash must be set to 1 to prevent storage of weak LM password hashes"
     rationale: "LM hashes are trivially crackable; disabling them forces NTLM/Kerberos only"
     remediation: >
@@ -55,7 +55,7 @@ checks:
       - 'r:HKLM\System\CurrentControlSet\Control\Lsa -> NoLMHash -> 1'
 
   - id: 1003
-    title: "Ensure NTLMv2 session security is required for NTLM clients"
+    name: "Ensure NTLMv2 session security is required for NTLM clients"
     description: "NTLMMinClientSec must require 128-bit encryption and NTLMv2 (value 537395200)"
     rationale: "Weaker NTLM versions are vulnerable to downgrade and relay attacks"
     remediation: >
@@ -68,7 +68,7 @@ checks:
   # UAC (User Account Control)  (r:)
   # ---------------------------------------------------------------------------
   - id: 1004
-    title: "Ensure User Account Control (UAC) is enabled"
+    name: "Ensure User Account Control (UAC) is enabled"
     description: "EnableLUA must be set to 1 in the System registry key"
     rationale: "UAC restricts privilege elevation and reduces the impact of malware"
     remediation: >
@@ -78,7 +78,7 @@ checks:
       - 'r:HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System -> EnableLUA -> 1'
 
   - id: 1005
-    title: "Ensure UAC Admin Approval Mode is enabled for built-in Administrator"
+    name: "Ensure UAC Admin Approval Mode is enabled for built-in Administrator"
     description: "FilterAdministratorToken must be set to 1"
     rationale: "Without this, the built-in Administrator runs without UAC prompts"
     remediation: >
@@ -91,7 +91,7 @@ checks:
   # WINDOWS FIREWALL  (r:)
   # ---------------------------------------------------------------------------
   - id: 1006
-    title: "Ensure Windows Firewall is enabled for the Domain profile"
+    name: "Ensure Windows Firewall is enabled for the Domain profile"
     description: "EnableFirewall must be 1 under the Domain profile key"
     rationale: "The firewall provides critical protection on domain-joined networks"
     remediation: >
@@ -101,7 +101,7 @@ checks:
       - 'r:HKLM\SYSTEM\CurrentControlSet\Services\SharedAccess\Parameters\FirewallPolicy\DomainProfile -> EnableFirewall -> 1'
 
   - id: 1007
-    title: "Ensure Windows Firewall is enabled for the Private profile"
+    name: "Ensure Windows Firewall is enabled for the Private profile"
     description: "EnableFirewall must be 1 under the Private profile key"
     rationale: "Private networks should still be protected by the firewall"
     remediation: >
@@ -111,7 +111,7 @@ checks:
       - 'r:HKLM\SYSTEM\CurrentControlSet\Services\SharedAccess\Parameters\FirewallPolicy\StandardProfile -> EnableFirewall -> 1'
 
   - id: 1008
-    title: "Ensure Windows Firewall is enabled for the Public profile"
+    name: "Ensure Windows Firewall is enabled for the Public profile"
     description: "EnableFirewall must be 1 under the Public profile key"
     rationale: "Public networks are the highest risk; firewall must always be on"
     remediation: >
@@ -124,7 +124,7 @@ checks:
   # REMOTE ACCESS  (r:)
   # ---------------------------------------------------------------------------
   - id: 1009
-    title: "Ensure Remote Desktop requires Network Level Authentication (NLA)"
+    name: "Ensure Remote Desktop requires Network Level Authentication (NLA)"
     description: "UserAuthentication must be 1 in the Terminal Server WinStations key"
     rationale: "NLA authenticates users before a full RDP session is established, reducing attack surface"
     remediation: >
@@ -134,7 +134,7 @@ checks:
       - 'r:HKLM\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp -> UserAuthentication -> 1'
 
   - id: 1010
-    title: "Ensure SMBv1 protocol is disabled"
+    name: "Ensure SMBv1 protocol is disabled"
     description: "SMB1Protocol value must be 0 to disable the legacy SMBv1 protocol"
     rationale: "SMBv1 is exploited by WannaCry and other ransomware; it must be disabled"
     remediation: >
@@ -147,7 +147,7 @@ checks:
   # AUTORUN / AUTOPLAY  (r:)
   # ---------------------------------------------------------------------------
   - id: 1011
-    title: "Ensure AutoRun is disabled for all drives"
+    name: "Ensure AutoRun is disabled for all drives"
     description: "NoDriveTypeAutoRun must be 255 (0xFF) to disable AutoRun on all drive types"
     rationale: "AutoRun allows malicious code on removable media to execute automatically"
     remediation: >
@@ -160,7 +160,7 @@ checks:
   # FILE SYSTEM  (f:, d:)
   # ---------------------------------------------------------------------------
   - id: 1012
-    title: "Ensure Windows hosts file exists"
+    name: "Ensure Windows hosts file exists"
     description: "The hosts file at %WINDIR%\\System32\\drivers\\etc\\hosts must be present"
     rationale: "The hosts file is required for local name resolution"
     remediation: "Restore the default hosts file from a known-good Windows installation"
@@ -169,7 +169,7 @@ checks:
       - 'f:$drivers_etc\hosts'
 
   - id: 1013
-    title: "Ensure Windows hosts file defines the loopback address"
+    name: "Ensure Windows hosts file defines the loopback address"
     description: "The line '127.0.0.1  localhost' must be present and uncommented"
     rationale: "Applications depend on localhost resolving to 127.0.0.1"
     remediation: "Add '127.0.0.1  localhost' to %WINDIR%\\System32\\drivers\\etc\\hosts"
@@ -178,7 +178,7 @@ checks:
       - 'f:$drivers_etc\hosts -> !r:^# && r:127\.0\.0\.1 && r:localhost'
 
   - id: 1014
-    title: "Ensure the Windows System32 directory exists"
+    name: "Ensure the Windows System32 directory exists"
     description: "C:\\Windows\\System32 must be present"
     rationale: "System32 contains critical OS executables; its absence indicates severe corruption"
     condition: all
@@ -189,7 +189,7 @@ checks:
   # PROCESSES  (p:)
   # ---------------------------------------------------------------------------
   - id: 1015
-    title: "Ensure the Windows Service Host (svchost) process is running"
+    name: "Ensure the Windows Service Host (svchost) process is running"
     description: "svchost.exe is the host process for Windows services and must be running"
     rationale: "Without svchost, critical Windows services cannot run"
     condition: all
@@ -197,7 +197,7 @@ checks:
       - 'p:svchost'
 
   - id: 1016
-    title: "Ensure Windows Security Center service is running"
+    name: "Ensure Windows Security Center service is running"
     description: "SecurityHealthService or wscsvc must be active"
     rationale: "Security Center monitors AV, firewall, and update status"
     condition: any
@@ -209,7 +209,7 @@ checks:
   # COMMAND OUTPUT — numeric  (c: -> n:)
   # ---------------------------------------------------------------------------
   - id: 1017
-    title: "Ensure Windows 11 build number is at least 22621 (22H2)"
+    name: "Ensure Windows 11 build number is at least 22621 (22H2)"
     description: "Numeric check on CurrentBuild to confirm 22H2 or later is installed"
     rationale: "Build 22621 (22H2) includes critical security patches not present in 22000 (21H2)"
     remediation: "Update Windows to version 22H2 or later via Windows Update"
@@ -221,7 +221,7 @@ checks:
   # WINDOWS DEFENDER / ANTIMALWARE  (r:)
   # ---------------------------------------------------------------------------
   - id: 1018
-    title: "Ensure Windows Defender real-time protection is enabled"
+    name: "Ensure Windows Defender real-time protection is enabled"
     description: "DisableRealtimeMonitoring must be absent or set to 0"
     rationale: "Real-time monitoring detects and blocks malware as it is written or executed"
     remediation: >
@@ -231,7 +231,7 @@ checks:
       - 'r:HKLM\SOFTWARE\Policies\Microsoft\Windows Defender\Real-Time Protection -> DisableRealtimeMonitoring -> 1'
 
   - id: 1019
-    title: "Ensure Windows Script Host is disabled (or not overridden)"
+    name: "Ensure Windows Script Host is disabled (or not overridden)"
     description: "Enabled value under Windows Script Host settings must not be 0 (explicit disable only)"
     rationale: "WSH is commonly abused by malware to run VBScript/JScript payloads"
     remediation: >
